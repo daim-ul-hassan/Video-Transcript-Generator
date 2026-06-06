@@ -1,4 +1,4 @@
 streamlit
-openai
+groq
 opencv-python
 pillow

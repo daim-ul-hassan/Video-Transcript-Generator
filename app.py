@@ -5,22 +5,24 @@ from io import BytesIO
 
 import cv2
 import streamlit as st
-from openai import OpenAI
+from groq import Groq
 from PIL import Image
 
 
 st.set_page_config(page_title="Video Scene Describer", page_icon="video", layout="centered")
 
+VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
-def get_openai_client() -> OpenAI:
+
+def get_groq_client() -> Groq:
     try:
-        api_key = st.secrets.get("OPENAI_API_KEY", None)
+        api_key = st.secrets.get("GROQ_API_KEY", None)
     except Exception:
         api_key = None
-    api_key = api_key or os.getenv("OPENAI_API_KEY")
+    api_key = api_key or os.getenv("GROQ_API_KEY")
     if not api_key:
-        raise RuntimeError("Missing OPENAI_API_KEY. Add it to your environment or Streamlit secrets.")
-    return OpenAI(api_key=api_key)
+        raise RuntimeError("Missing GROQ_API_KEY. Add it to your environment or Streamlit secrets.")
+    return Groq(api_key=api_key)
 
 
 def resize_frame(frame_bgr, max_width: int = 1024) -> Image.Image:
@@ -67,7 +69,7 @@ def extract_frames_every_n_seconds(video_path: str, interval_seconds: int = 3) -
     return frames
 
 
-def describe_frame(client: OpenAI, model: str, image: Image.Image, timestamp: float) -> str:
+def describe_frame(client: Groq, image: Image.Image, timestamp: float) -> str:
     prompt = (
         "Describe this video frame in one short sentence. "
         "Focus on the main action, people, objects, and setting. "
@@ -75,7 +77,7 @@ def describe_frame(client: OpenAI, model: str, image: Image.Image, timestamp: fl
     )
 
     response = client.chat.completions.create(
-        model=model,
+        model=VISION_MODEL,
         messages=[
             {
                 "role": "user",
@@ -89,7 +91,7 @@ def describe_frame(client: OpenAI, model: str, image: Image.Image, timestamp: fl
     return (response.choices[0].message.content or "").strip()
 
 
-def summarize_scene(client: OpenAI, model: str, frame_notes: list[str]) -> str:
+def summarize_scene(client: Groq, frame_notes: list[str]) -> str:
     joined_notes = "\n".join(f"- {note}" for note in frame_notes)
     prompt = (
         "You are given short descriptions of frames from one video.\n"
@@ -99,7 +101,7 @@ def summarize_scene(client: OpenAI, model: str, frame_notes: list[str]) -> str:
     )
 
     response = client.chat.completions.create(
-        model=model,
+        model=VISION_MODEL,
         messages=[{"role": "user", "content": prompt}],
     )
     return (response.choices[0].message.content or "").strip()
@@ -113,8 +115,8 @@ st.write(
 
 with st.sidebar:
     st.header("Settings")
-    model_name = st.text_input("OpenAI model", value="gpt-5.4-mini")
-    st.caption("Any latest OpenAI model with image input will work. `gpt-5.4-mini` is a good default for simple apps.")
+    st.text_input("Groq vision model", value=VISION_MODEL, disabled=True)
+    st.caption("This app is configured for Groq vision analysis with `meta-llama/llama-4-scout-17b-16e-instruct`.")
 
 uploaded_video = st.file_uploader("Upload an MP4 video", type=["mp4"])
 
@@ -124,7 +126,7 @@ if uploaded_video:
     if st.button("Analyze video", type="primary"):
         temp_path = None
         try:
-            client = get_openai_client()
+            client = get_groq_client()
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
                 temp_file.write(uploaded_video.getbuffer())
                 temp_path = temp_file.name
@@ -143,11 +145,11 @@ if uploaded_video:
 
                 for index, (timestamp, frame) in enumerate(frames, start=1):
                     status_text.write(f"Analyzing frame {index} of {len(frames)} at {int(timestamp)}s...")
-                    note = describe_frame(client, model_name, frame, timestamp)
+                    note = describe_frame(client, frame, timestamp)
                     frame_notes.append(f"{int(timestamp)}s: {note}")
                     progress.progress(index / len(frames))
 
-                scene_description = summarize_scene(client, model_name, frame_notes)
+                scene_description = summarize_scene(client, frame_notes)
 
                 st.subheader("Scene Description")
                 st.write(scene_description)

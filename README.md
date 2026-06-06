@@ -1,6 +1,6 @@
 # Video Transcript Generator
 
-A simple Streamlit app that accepts a single MP4 upload, extracts one frame every 3 seconds, sends each sampled frame to an OpenAI vision model, and generates one concise scene description for the whole video.
+A simple Streamlit app that accepts a single MP4 upload, extracts one frame every 3 seconds, sends each sampled frame to a Groq vision model, and generates one concise scene description for the whole video.
 
 ## Features
 
@@ -13,7 +13,7 @@ A simple Streamlit app that accepts a single MP4 upload, extracts one frame ever
 ## Requirements
 
 - Python 3.10 or newer
-- An OpenAI API key
+- A Groq API key
 
 ## Setup
 
@@ -27,13 +27,13 @@ pip install -r requirements.txt
 3. Set your API key:
 
 ```bash
-set OPENAI_API_KEY=your_api_key_here
+set GROQ_API_KEY=your_api_key_here
 ```
 
 Or add it to Streamlit secrets:
 
 ```toml
-OPENAI_API_KEY = "your_api_key_here"
+GROQ_API_KEY = "your_api_key_here"
 ```
 
 ## Run the app
@@ -46,11 +46,11 @@ streamlit run app.py
 
 1. Upload an MP4 video.
 2. The app samples 1 frame every 3 seconds using OpenCV.
-3. Each frame is analyzed by an OpenAI vision-capable model.
+3. Each frame is analyzed by a Groq vision-capable model.
 4. The frame-level notes are combined into one short scene description.
 
 ## Notes
 
 - This version supports MP4 only.
 - If the API key is missing, the app will show a clear error message.
-- You can change the model name in the sidebar if needed.
+- The app uses Groq's `meta-llama/llama-4-scout-17b-16e-instruct` vision model.
