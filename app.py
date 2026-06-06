@@ -15,11 +15,12 @@ VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 
 def get_groq_client() -> Groq:
+    api_key = st.session_state.get("groq_api_key", "").strip()
     try:
-        api_key = st.secrets.get("GROQ_API_KEY", None)
+        secret_key = st.secrets.get("GROQ_API_KEY", None)
     except Exception:
-        api_key = None
-    api_key = api_key or os.getenv("GROQ_API_KEY")
+        secret_key = None
+    api_key = api_key or secret_key or os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError("Missing GROQ_API_KEY. Add it to your environment or Streamlit secrets.")
     return Groq(api_key=api_key)
@@ -116,6 +117,13 @@ st.write(
 with st.sidebar:
     st.header("Settings")
     st.text_input("Groq vision model", value=VISION_MODEL, disabled=True)
+    st.text_input(
+        "Groq API key",
+        key="groq_api_key",
+        type="password",
+        placeholder="gsk_...",
+        help="Paste your Groq API key here if you do not want to use environment variables or Streamlit secrets.",
+    )
     st.caption("This app is configured for Groq vision analysis with `meta-llama/llama-4-scout-17b-16e-instruct`.")
 
 uploaded_video = st.file_uploader("Upload an MP4 video", type=["mp4"])

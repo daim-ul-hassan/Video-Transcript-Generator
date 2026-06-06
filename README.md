@@ -36,6 +36,8 @@ Or add it to Streamlit secrets:
 GROQ_API_KEY = "your_api_key_here"
 ```
 
+You can also paste the key directly into the sidebar inside the app under "Groq API key".
+
 ## Run the app
 
 ```bash
