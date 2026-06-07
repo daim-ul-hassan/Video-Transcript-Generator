@@ -24,19 +24,7 @@ A simple Streamlit app that accepts a single MP4 upload, extracts one frame ever
 pip install -r requirements.txt
 ```
 
-3. Set your API key:
-
-```bash
-set GROQ_API_KEY=your_api_key_here
-```
-
-Or add it to Streamlit secrets:
-
-```toml
-GROQ_API_KEY = "your_api_key_here"
-```
-
-You can also paste the key directly into the sidebar inside the app under "Groq API key".
+3. Open the app and paste your Groq API key into the sidebar under "Groq API key".
 
 ## Run the app
 
@@ -56,3 +44,4 @@ streamlit run app.py
 - This version supports MP4 only.
 - If the API key is missing, the app will show a clear error message.
 - The app uses Groq's `meta-llama/llama-4-scout-17b-16e-instruct` vision model.
+- For Streamlit Cloud, `packages.txt` installs the Linux packages needed by OpenCV/video decoding.
