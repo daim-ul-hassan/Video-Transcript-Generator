@@ -3,7 +3,7 @@ import os
 import tempfile
 from io import BytesIO
 
-import cv2
+import imageio.v2 as imageio
 import streamlit as st
 from groq import Groq
 from PIL import Image
@@ -21,9 +21,8 @@ def get_groq_client() -> Groq:
     return Groq(api_key=api_key)
 
 
-def resize_frame(frame_bgr, max_width: int = 1024) -> Image.Image:
-    frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    image = Image.fromarray(frame_rgb)
+def resize_frame(frame_array, max_width: int = 1024) -> Image.Image:
+    image = Image.fromarray(frame_array)
     if image.width > max_width:
         new_height = int(image.height * (max_width / image.width))
         image = image.resize((max_width, new_height))
@@ -38,30 +37,36 @@ def image_to_data_url(image: Image.Image) -> str:
 
 
 def extract_frames_every_n_seconds(video_path: str, interval_seconds: int = 3) -> list[tuple[float, Image.Image]]:
-    capture = cv2.VideoCapture(video_path)
-    if not capture.isOpened():
-        raise RuntimeError("Could not open the uploaded video.")
-
-    fps = capture.get(cv2.CAP_PROP_FPS) or 0
-    frame_count = capture.get(cv2.CAP_PROP_FRAME_COUNT) or 0
-    duration_seconds = frame_count / fps if fps > 0 else 0
-
     frames: list[tuple[float, Image.Image]] = []
-    timestamp = 0.0
+    reader = None
+    try:
+        reader = imageio.get_reader(video_path)
+        meta = reader.get_meta_data()
+        fps = float(meta.get("fps") or 0)
+        duration_seconds = float(meta.get("duration") or 0)
 
-    while True:
-        if duration_seconds and timestamp > duration_seconds:
-            break
+        if fps <= 0:
+            raise RuntimeError("Could not determine the video frame rate.")
 
-        capture.set(cv2.CAP_PROP_POS_MSEC, timestamp * 1000)
-        success, frame = capture.read()
-        if not success:
-            break
+        timestamp = 0.0
+        while True:
+            if duration_seconds and timestamp > duration_seconds:
+                break
 
-        frames.append((timestamp, resize_frame(frame)))
-        timestamp += interval_seconds
+            frame_index = int(round(timestamp * fps))
+            try:
+                frame = reader.get_data(frame_index)
+            except IndexError:
+                break
 
-    capture.release()
+            frames.append((timestamp, resize_frame(frame)))
+            timestamp += interval_seconds
+    except Exception as exc:
+        raise RuntimeError(f"Could not open the uploaded video: {exc}") from exc
+    finally:
+        if reader is not None:
+            reader.close()
+
     return frames
 
 
